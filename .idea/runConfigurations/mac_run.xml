@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="mac-run" type="NodeJSConfigurationType" factoryName="Node.js" path-to-node="/usr/local/bin/iojs" path-to-js-file="localmain.js" working-dir="$PROJECT_DIR$">
+    <method />
+  </configuration>
+</component>

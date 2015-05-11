@@ -1,0 +1,4 @@
+--require should
+--require co-mocha
+--ui bdd
+--recursive

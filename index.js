@@ -6,7 +6,8 @@ const subErrMsg = 'Connection in subscriber mode, only subscriber commands may b
 function getInitMem() {
     return {
         mem: {},
-        subscribers: {}
+        subscribers: {},
+        psubscribers: {}
     }
 }
 
@@ -22,10 +23,22 @@ Array.from = function (foreachable) {
     return r;
 };
 
+function testRedisPattern(pattern, channel) {
+    const rex = new RegExp(pattern.replace('?', '.').replace('*', '.*'));
+    return (rex).test(channel);
+}
+
 class FakeIoRedis {
     constructor(remoteHostKey) {
         this._ = {};
         this._.subchannel = new Set();
+        this._.subpattern = new Set();
+        this._.callbacks = {
+            message: function () {
+            },
+            pmessage: function () {
+            }
+        };
 
         if (!remoteHostKey) {
             remoteHostKey = 'localhost';
@@ -33,17 +46,13 @@ class FakeIoRedis {
 
         this._.remoteHostKey = remoteHostKey;
         this._.isSubscriber = false;
-        this._.callbacks = {
-            message: function () {
-            }
-        };
 
         this._.clear = function () {
             remoteHosts[remoteHostKey] = getInitMem();
         };
 
         if ((remoteHostKey in remoteHosts) === false) {
-            remoteHosts[remoteHostKey] = getInitMem();
+            this._.clear();
         }
     }
 
@@ -115,12 +124,10 @@ class FakeIoRedis {
             throw new Error(subErrMsg);
         }
 
-        pattern = new RegExp(pattern.replace(/\*/, '.*'));
-
         const result = [];
 
         for (var key in remoteHosts[this._.remoteHostKey].mem) {
-            if (pattern.test(key) === false) {
+            if (testRedisPattern(pattern, key) === false) {
                 continue;
             }
 
@@ -222,18 +229,60 @@ class FakeIoRedis {
 
     *subscribe(channel) {
         this._.isSubscriber = true;
-        if ((channel in remoteHosts[this._.remoteHostKey].subscribers) === false) {
-            remoteHosts[this._.remoteHostKey].subscribers[channel] = new Set();
+
+        const myRemote = remoteHosts[this._.remoteHostKey];
+
+        if ((channel in myRemote.subscribers) === false) {
+            myRemote.subscribers[channel] = new Set();
         }
 
-        remoteHosts[this._.remoteHostKey].subscribers[channel].add(this);
+        myRemote.subscribers[channel].add(this);
         this._.subchannel.add(channel);
 
-        return this._.subchannel.size;
+        return this._.subchannel.size + this._.subpattern.size;
+    }
+
+    *unsubscribe(channel) {
+        const myRemote = remoteHosts[this._.remoteHostKey];
+
+        if ((channel in myRemote.subscribers)) {
+            myRemote.subscribers[channel].delete(this);
+            this._.subchannel.delete(channel);
+        }
+
+        return this._.subchannel.size + this._.subpattern.size;
+    }
+
+    *psubscribe(pattern) {
+        this._.isSubscriber = true;
+
+        const myRemote = remoteHosts[this._.remoteHostKey];
+
+        if ((pattern in myRemote.psubscribers) === false) {
+            myRemote.psubscribers[pattern] = new Set();
+        }
+
+        myRemote.psubscribers[pattern].add(this);
+        this._.subpattern.add(pattern);
+
+        return this._.subchannel.size + this._.subpattern.size;
+    }
+
+    *punsubscribe(pattern) {
+        const myRemote = remoteHosts[this._.remoteHostKey];
+
+        if ((pattern in myRemote.psubscribers)) {
+            myRemote.psubscribers[pattern].delete(this);
+            this._.subpattern.delete(pattern);
+        }
+
+        return this._.subchannel.size + this._.subpattern.size;
     }
 
     on(msgType, callback) {
         if (msgType === 'message') {
+            this._.callbacks[msgType] = callback;
+        } else if (msgType === 'pmessage') {
             this._.callbacks[msgType] = callback;
         }
 
@@ -241,21 +290,28 @@ class FakeIoRedis {
     }
 
     *publish(channel, value) {
-        if ((channel in remoteHosts[this._.remoteHostKey].subscribers) === false) {
+        const myRemote = remoteHosts[this._.remoteHostKey];
+
+        if ((channel in myRemote.subscribers) === false) {
             return 0;
         }
 
         let receiveCount = 0;
 
-        for (let subscriber of remoteHosts[this._.remoteHostKey].subscribers[channel]) {
+        for (let subscriber of myRemote.subscribers[channel]) {
             subscriber._.callbacks.message(channel, value);
             receiveCount++;
-
-            //if ('pmessage' in subscriber._.callbacks) {
-            //    subscriber._.callbacks['pmessage'](channel, value);
-            //    receiveCount++;
-            //}
         }
+
+        for (let pattern in myRemote.psubscribers) {
+            for (let psubscriber of myRemote.psubscribers[pattern]) {
+                if (testRedisPattern(pattern, channel)) {
+                    psubscriber._.callbacks.pmessage(pattern, channel, value);
+                    receiveCount++;
+                }
+            }
+        }
+
         return receiveCount;
     }
 
@@ -267,13 +323,6 @@ class FakeIoRedis {
         }
     }
 
-    *unsubscribe(channel) {
-        if ((channel in remoteHosts[this._.remoteHostKey].subscribers)) {
-            remoteHosts[this._.remoteHostKey].subscribers[channel].delete(this);
-            this._.subchannel.delete(channel);
-        }
-        return this._.subchannel.size;
-    }
 
     disconnect() {
 

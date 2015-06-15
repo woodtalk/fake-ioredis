@@ -110,7 +110,7 @@ describe('scenarios', function () {
                 (yield client.publish('test:gogo:1234', 'hello world')).should.be.eql(1);
             });
 
-            it('psubscribe', function* () {
+            it('combo subcribe and psubscribe', function* () {
                 const client = new FakeIoRedis(hostkey);
                 const sub = new FakeIoRedis(hostkey);
 
@@ -140,6 +140,79 @@ describe('scenarios', function () {
 
                 (yield sub.punsubscribe('test:gogo:1234')).should.be.eql(4);
                 (yield client.publish('test:gogo:1234', 'hello world')).should.be.eql(3);
+
+                (pmessageResults).should.be.eql([
+                    {
+                        pattern: 't?st:gogo:1234',
+                        channel: 'test:gogo:1234',
+                        message: 'hello world'
+                    },
+                    {
+                        pattern: 'test:gogo:1234',
+                        channel: 'test:gogo:1234',
+                        message: 'hello world'
+                    },
+                    {
+                        channel: 'test:gogo:1234',
+                        message: 'hello world',
+                        pattern: 'test:gogo:*'
+                    },
+                    {
+                        channel: 'test:gogo:1234',
+                        message: 'hello world',
+                        pattern: 't?st:gogo:1234'
+                    },
+                    {
+                        channel: 'test:gogo:1234',
+                        message: 'hello world',
+                        pattern: 'test:gogo:1234'
+                    },
+                    {
+                        channel: 'test:gogo:1234',
+                        message: 'hello world',
+                        pattern: 'test:gogo:*'
+                    },
+                    {
+                        channel: 'test:gogo:1234',
+                        message: 'hello world',
+                        pattern: 't?st:gogo:1234'
+                    },
+                    {
+                        channel: 'test:gogo:1234',
+                        message: 'hello world',
+                        pattern: 'test:gogo:*'
+                    }
+                ]);
+
+                (messageResults).should.be.length(0);
+            });
+
+            it('only psubscribe', function* () {
+                const client = new FakeIoRedis(hostkey);
+                const sub = new FakeIoRedis(hostkey);
+
+                const pmessageResults = [];
+                sub.on('pmessage', function (pattern, channel, message) {
+                    pmessageResults.push({pattern: pattern, channel: channel, message: message});
+                });
+
+                const messageResults = [];
+                sub.on('message', function (channel, message) {
+                    messageResults.push({channel: channel, message: message});
+                });
+
+                (yield sub.psubscribe('t?st:gogo:1234')).should.be.eql(1);
+                (yield sub.psubscribe('test:gogo:1234')).should.be.eql(2);
+                (yield sub.psubscribe('test:?ogo:1234aa')).should.be.eql(3);
+                (yield sub.psubscribe('test:gogo:*')).should.be.eql(4);
+
+                (yield client.publish('test:gogo:1234', 'hello world')).should.be.eql(3);
+
+                (yield sub.unsubscribe('test:gogo:1234')).should.be.eql(4);
+                (yield client.publish('test:gogo:1234', 'hello world')).should.be.eql(3);
+
+                (yield sub.punsubscribe('test:gogo:1234')).should.be.eql(3);
+                (yield client.publish('test:gogo:1234', 'hello world')).should.be.eql(2);
 
                 (pmessageResults).should.be.eql([
                     {

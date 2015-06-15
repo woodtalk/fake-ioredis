@@ -292,15 +292,13 @@ class FakeIoRedis {
     *publish(channel, value) {
         const myRemote = remoteHosts[this._.remoteHostKey];
 
-        if ((channel in myRemote.subscribers) === false) {
-            return 0;
-        }
-
         let receiveCount = 0;
 
-        for (let subscriber of myRemote.subscribers[channel]) {
-            subscriber._.callbacks.message(channel, value);
-            receiveCount++;
+        if (channel in myRemote.subscribers) {
+            for (let subscriber of myRemote.subscribers[channel]) {
+                subscriber._.callbacks.message(channel, value);
+                receiveCount++;
+            }
         }
 
         for (let pattern in myRemote.psubscribers) {

@@ -3,6 +3,8 @@
 
 const subErrMsg = 'Connection in subscriber mode, only subscriber commands may be used';
 const typeErrMsg = 'WRONGTYPE Operation against a key holding the wrong kind of value';
+const valueErrMsg = 'ERR value is not a valid float';
+const syntaxErrMsg = 'ERR syntax error';
 
 class ReplyError extends Error {
     constructor(message) {
@@ -144,7 +146,7 @@ class FakeIoRedis {
 
     *keys(pattern) {
         if (this._.isSubscriber) {
-            throw new Error(subErrMsg);
+            throw new ReplyError(subErrMsg);
         }
 
         const result = [];
@@ -251,8 +253,8 @@ class FakeIoRedis {
         if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
             return 0;
         }
-        if ((remoteHosts[this._.remoteHostKey].mem[key] instanceof Set) === false) {
-            throw new Error('ReplyError');
+        if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
+            throw new ReplyError(typeErrMsg);
         }
 
         return remoteHosts[this._.remoteHostKey].mem[key].size;
@@ -352,29 +354,39 @@ class FakeIoRedis {
         }
     }
 
-    *zadd() {
-        //values = Array.prototype.slice.call(arguments, 1);
-        //
-        //if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
-        //    remoteHosts[this._.remoteHostKey].mem[key] = new Set();
-        //} else if ((remoteHosts[this._.remoteHostKey].mem[key] instanceof Set) === false) {
-        //    throw new Error('ReplyError');
-        //}
-        //
-        //const oldSize = remoteHosts[this._.remoteHostKey].mem[key].size;
-        //
-        //for (let value of values) {
-        //    if (typeof value === 'string') {
-        //        value = value.toString();
-        //    }
-        //    remoteHosts[this._.remoteHostKey].mem[key].add(value);
-        //}
-        //
-        //if (oldSize === remoteHosts[this._.remoteHostKey].mem[key].size) {
-        //    return 0;
-        //}
-        //
-        //return 1;
+    *zadd(key, values) {
+        values = Array.prototype.slice.call(arguments, 1);
+        if (values.length % 2 !== 0) {
+            throw new ReplyError(syntaxErrMsg);
+        }
+
+        const scoreAndValues = {};
+        for (let i = 0; i < values.length; i += 2) {
+            scoreAndValues[values[i]] = values[i + 1];
+        }
+
+        var remoteHost = remoteHosts[this._.remoteHostKey];
+        if (!remoteHost.mem.hasOwnProperty(key)) {
+            remoteHost.mem[key] = new Map();
+            remoteHost.meta[key] = 'zset';
+        }
+
+        if (remoteHost.meta[key] !== 'zset') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        let r = 0;
+        for (let score in scoreAndValues) {
+            if (typeof score === 'string') {
+                score = score.toString();
+            }
+            if (!remoteHost.mem[key].has(scoreAndValues[score])) {
+                r++;
+            }
+            remoteHost.mem[key].set(scoreAndValues[score], score);
+        }
+
+        return r;
     }
 
     *zrange() {

@@ -10,7 +10,7 @@ const hostkeys = [undefined, 'test'];
 describe('scenarios', function () {
     for (let hostkey of hostkeys) {
         describe('hostkey is -> ' + hostkey, function () {
-            it('key?', function* () {
+            it('exists', function* () {
                 const client = new FakeIoRedis(hostkey);
                 yield client.set('aaa', 'value');
 
@@ -271,7 +271,7 @@ describe('scenarios', function () {
                 (messageResults).should.be.length(0);
             });
 
-            it('zset', function* () {
+            it.only('zset', function* () {
                 const client = new FakeIoRedis(hostkey);
 
                 (yield client.zadd('myzset', 1, 'one')).should.be.eql(1);

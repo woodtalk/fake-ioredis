@@ -8,9 +8,8 @@ const FakeIoRedis = require('../index');
 function* review() {
     const client = new (this.creator)();
 
-    yield client.set('string', 'a');
     try {
-        yield client.srem('string', 's', 'y');
+        yield client.zadd('string', 0, 'y', 0);
     } catch (e) {
         console.log(e.name);
         console.error(e.stack);

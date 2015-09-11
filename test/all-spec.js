@@ -69,9 +69,18 @@ describe('scenarios', function () {
                 const client = new FakeIoRedis(hostkey);
 
                 (yield client.sismember('temp', 'a', 'b')).should.be.eql(0);
-                (yield client.sadd('temp', 'a', 'b')).should.be.eql(1);
+                (yield client.sadd('temp', 'a', 'b')).should.be.eql(2);
                 (yield client.sismember('temp', 'a')).should.be.eql(1);
                 (yield client.srem('temp', 'a', 'b')).should.be.eql(2);
+
+                yield client.set('string', 's');
+                try {
+                    yield client.sadd('string', 'aaa');
+                } catch (e) {
+                    var check = true;
+                    (e.name).should.be.eql('ReplyError');
+                }
+                (check).should.be.true();
             });
 
             it('pub/sub', function* () {

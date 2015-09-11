@@ -2,10 +2,21 @@
 'use strict';
 
 const subErrMsg = 'Connection in subscriber mode, only subscriber commands may be used';
+const typeErrMsg = 'WRONGTYPE Operation against a key holding the wrong kind of value';
+
+class ReplyError extends Error {
+    constructor(message) {
+        super(message);
+
+        this.message = message;
+        super.name = 'ReplyError';
+    }
+}
 
 function getInitMem() {
     return {
         mem: {},
+        meta: {},
         subscribers: {},
         psubscribers: {}
     }
@@ -61,7 +72,7 @@ class FakeIoRedis {
             key = key.toString();
         }
 
-        if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
+        if (!remoteHosts[this._.remoteHostKey].meta.hasOwnProperty(key)) {
             return 0;
         }
 
@@ -77,7 +88,17 @@ class FakeIoRedis {
             value = value.toString();
         }
 
-        remoteHosts[this._.remoteHostKey].mem[key] = value;
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+
+        if (remoteHost.meta.hasOwnProperty(key)) {
+            if (remoteHost.meta[key] !== 'string') {
+                throw new ReplyError(typeErrMsg);
+            }
+        }
+
+        remoteHost.mem[key] = value;
+        remoteHost.meta[key] = 'string';
+
         return 'OK';
     }
 
@@ -91,10 +112,12 @@ class FakeIoRedis {
                 key = key.toString();
             }
 
-            if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
+            if (!remoteHosts[this._.remoteHostKey].meta.hasOwnProperty(key)) {
                 continue;
             }
+
             delete remoteHosts[this._.remoteHostKey].mem[key];
+            delete remoteHosts[this._.remoteHostKey].meta[key];
             r++;
         }
 
@@ -103,7 +126,7 @@ class FakeIoRedis {
 
     *'get'(key) {
         if (this._.isSubscriber) {
-            throw new Error(subErrMsg);
+            throw new ReplyError(subErrMsg);
         }
 
         if (typeof key !== 'string') {
@@ -142,39 +165,18 @@ class FakeIoRedis {
             key = key.toString();
         }
 
-        values = Array.prototype.slice.call(arguments, 1);
+        const mem = remoteHosts[this._.remoteHostKey].mem;
+        var meta = remoteHosts[this._.remoteHostKey].meta;
 
-        if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
-            remoteHosts[this._.remoteHostKey].mem[key] = new Set();
-        } else if ((remoteHosts[this._.remoteHostKey].mem[key] instanceof Set) === false) {
-            throw new Error('ReplyError');
+        if ((key in mem) === false) {
+            mem[key] = new Set();
+            meta[key] = 'set';
         }
 
-        const oldSize = remoteHosts[this._.remoteHostKey].mem[key].size;
+        const setData = mem[key];
 
-        for (let value of values) {
-            if (typeof value === 'string') {
-                value = value.toString();
-            }
-            remoteHosts[this._.remoteHostKey].mem[key].add(value);
-        }
-
-        if (oldSize === remoteHosts[this._.remoteHostKey].mem[key].size) {
-            return 0;
-        }
-
-        return 1;
-    }
-
-    *srem(key, values) {
-        if (typeof key !== 'string') {
-            key = key.toString();
-        }
-        if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
-            return 0;
-        }
-        if ((remoteHosts[this._.remoteHostKey].mem[key] instanceof Set) === false) {
-            throw new Error('ReplyError');
+        if (meta[key] !== 'set') {
+            throw new ReplyError(typeErrMsg);
         }
 
         values = Array.prototype.slice.call(arguments, 1);
@@ -184,7 +186,35 @@ class FakeIoRedis {
             if (typeof value === 'string') {
                 value = value.toString();
             }
-            if (remoteHosts[this._.remoteHostKey].mem[key].delete(value)) {
+            if (!setData.has(value)) {
+                r++;
+            }
+            setData.add(value);
+        }
+
+        return r;
+    }
+
+    *srem(key, values) {
+        if (typeof key !== 'string') {
+            key = key.toString();
+        }
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if ((key in remoteHost.mem) === false) {
+            return 0;
+        }
+        if (remoteHost.meta[key] !== 'set') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        values = Array.prototype.slice.call(arguments, 1);
+
+        let r = 0;
+        for (let value of values) {
+            if (typeof value === 'string') {
+                value = value.toString();
+            }
+            if (remoteHost.mem[key].delete(value)) {
                 r++;
             }
         }
@@ -196,18 +226,19 @@ class FakeIoRedis {
         if (typeof key !== 'string') {
             key = key.toString();
         }
-        if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if ((key in remoteHost.mem) === false) {
             return 0;
         }
-        if ((remoteHosts[this._.remoteHostKey].mem[key] instanceof Set) === false) {
-            throw new Error('ReplyError');
+        if (remoteHost.meta[key] !== 'set') {
+            throw new ReplyError(typeErrMsg);
         }
 
         if (typeof value === 'string') {
             value = value.toString();
         }
 
-        if (remoteHosts[this._.remoteHostKey].mem[key].has(value) === false) {
+        if (remoteHost.mem[key].has(value) === false) {
             return 0
         }
         return 1;
@@ -321,9 +352,51 @@ class FakeIoRedis {
         }
     }
 
+    *zadd() {
+        //values = Array.prototype.slice.call(arguments, 1);
+        //
+        //if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
+        //    remoteHosts[this._.remoteHostKey].mem[key] = new Set();
+        //} else if ((remoteHosts[this._.remoteHostKey].mem[key] instanceof Set) === false) {
+        //    throw new Error('ReplyError');
+        //}
+        //
+        //const oldSize = remoteHosts[this._.remoteHostKey].mem[key].size;
+        //
+        //for (let value of values) {
+        //    if (typeof value === 'string') {
+        //        value = value.toString();
+        //    }
+        //    remoteHosts[this._.remoteHostKey].mem[key].add(value);
+        //}
+        //
+        //if (oldSize === remoteHosts[this._.remoteHostKey].mem[key].size) {
+        //    return 0;
+        //}
+        //
+        //return 1;
+    }
+
+    *zrange() {
+    }
+
+    *zrangebyscore() {
+    }
+
+    *zrem() {
+    }
+
+    *zremrangebyscore() {
+    }
+
+    *zremrangebyrank() {
+    }
+
+    *zrank() {
+    }
+
 
     disconnect() {
-
     }
 }
 

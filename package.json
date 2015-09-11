@@ -15,7 +15,7 @@
     "fake-ioredis"
   ],
   "engines": {
-    "iojs": ">=2.0.1"
+    "iojs": ">=3.0.0"
   },
   "author": "woodtalk@daum.net",
   "license": "Beerware",
@@ -24,11 +24,11 @@
   },
   "homepage": "https://github.com/woodtalk/fake-ioredis#readme",
   "devDependencies": {
-    "co": "^4.5.4",
-    "co-mocha": "^1.1.0",
+    "co": "^4.6.0",
+    "co-mocha": "^1.1.2",
     "co-sleep": "0.0.1",
-    "ioredis": "^1.5.0",
-    "mocha": "^2.2.5",
-    "should": "^6.0.3"
+    "ioredis": "^1.8.0",
+    "mocha": "^2.3.2",
+    "should": "^7.1.0"
   }
 }

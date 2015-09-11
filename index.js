@@ -365,7 +365,7 @@ class FakeIoRedis {
             scoreAndValues[values[i]] = values[i + 1];
         }
 
-        var remoteHost = remoteHosts[this._.remoteHostKey];
+        const remoteHost = remoteHosts[this._.remoteHostKey];
         if (!remoteHost.mem.hasOwnProperty(key)) {
             remoteHost.mem[key] = new Map();
             remoteHost.meta[key] = 'zset';
@@ -389,7 +389,26 @@ class FakeIoRedis {
         return r;
     }
 
-    *zrange() {
+    *zrange(key, start, end) {
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] !== 'zset') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        const values = [];
+        var mem = remoteHost.mem[key];
+        for (let v of mem.keys()) {
+            values.push(v);
+        }
+
+        values.sort();
+
+        const r = [];
+        for (let k of values) {
+            r.push(mem.get(k));
+        }
+
+        return r;
     }
 
     *zrangebyscore() {

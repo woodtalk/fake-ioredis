@@ -1,7 +1,9 @@
 // Created by woodtalk on 2015-05-12.
 'use strict';
 
-const FakeIoRedis = require('./../index');
+const FakeIoRedis = require('../index');
+
+const should = require('should');
 
 const hostkeys = [undefined, 'test'];
 
@@ -259,10 +261,79 @@ describe('scenarios', function () {
 
                 (messageResults).should.be.length(0);
             });
+
+            it('zset', function* () {
+                const client = new FakeIoRedis(hostkey);
+
+                (yield client.zadd('myzset', 1, 'one')).should.be.eql(1);
+                (yield client.zadd('myzset', 1, 'one')).should.be.eql(0);
+                (yield client.zadd('myzset', 2, 'one')).should.be.eql(0);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one']);
+                (yield client.zrange('myzset', 0, -1, 'withscores')).should.be.eql(['one', 2]);
+
+                (yield client.zadd('myzset', 3, 'three')).should.be.eql(1);
+                (yield client.zadd('myzset', 4, 'four')).should.be.eql(1);
+
+                (yield client.zrange('myzset', 0, -1)).shoudl.be.eql(['one', 'three', 'four']);
+                (yield client.zrange('myzset', 0, -1, 'withscores')).should.be.eql(['one', '2', 'three', '3', 'four', '4']);
+
+                (yield client.zrem('myzset', 'one')).should.be.eql(1);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['three', 'four']);
+                (yield client.zrange('myzset', 0, -1, 'withscores')).should.be.eql(['three', '3', 'four', '4']);
+
+                (yield client.zrank('myzset', 'three')).should.be.eql(0);
+                (yield client.zrank('myzset', 'four')).should.be.eql(1);
+                should(yield client.zrank('myzset', 'one')).it.is.null();
+
+                (yield client.zadd('myzset', 1, 'one')).should.be.eql(1);
+                (yield client.zadd('myzset', 2, 'two')).should.be.eql(1);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'two', 'three', 'four']);
+                (yield client.zrangebyscore('myzset', '-inf', '+inf')).should.be.eql(['one', 'two', 'three', 'four']);
+                (yield client.zrangebyscore('myzset', 2, '+inf')).should.be.eql(['two', 'three', 'four']);
+                (yield client.zrangebyscore('myzset', 2, 3)).should.be.eql(['two', 'three']);
+                (yield client.zrangebyscore('myzset', '(2', 3)).should.be.eql(['three']);
+                (yield client.zrangebyscore('myzset', '(2', '3')).should.be.eql(['three']);
+                (yield client.zrangebyscore('myzset', '(2', 3, 'withscores')).should.be.eql(['three', '3']);
+                (yield client.zrangebyscore('myzset', '(2', '(3')).should.be.eql([]);
+
+                (yield client.zadd('myzset', 1, 'one1', 1, 'one2', 1, 'one3')).should.be.eql(2);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
+                (yield client.zrange('myzset', 0, -1, 'withscores')).should.be.eql(['one', '1', 'one1', '1', 'one2', '1', 'two', '2', 'three', '3', 'four', '4']);
+
+                (yield client.zrange('myzset', 2, 2)).should.be.eql(['one2']);
+                (yield client.zrange('myzset', 2, 3)).should.be.eql(['one2', 'two']);
+                (yield client.zrange('myzset', 1, 3)).should.be.eql(['one1', 'one2', 'two']);
+                (yield client.zrange('myzset', 0, 3)).should.be.eql(['one', 'one1', 'one2', 'two']);
+                (yield client.zrange('myzset', 0, 0)).should.be.eql(['one']);
+                (yield client.zrange('myzset', 0, 0, 'withscores')).should.be.eql(['one', '1']);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
+
+                (yield client.zremrangebyscore('myzset', 1, 1)).should.be.eql(3);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['two', 'three', 'four']);
+
+                (yield client.zadd('myzset', 1, 'one', 1, 'one1', 1, 'one2')).should.be.eql(3);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
+
+                (yield client.zremrangebyscore('myzset', 1, 2)).should.be.eql(4);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['three', 'four']);
+
+                (yield client.zadd('myzset', 1, 'one', 1, 'one1', 1, 'one2', 2, 'two')).should.be.eql(4);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
+
+                (yield client.zremrangebyrank('myzset', 1, 2)).should.be.eql(2);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'three', 'four']);
+            });
         });
     }
 
-    afterEach(function* () {
+    afterEach(function () {
         for (let hostkey of hostkeys) {
             const client = new FakeIoRedis(hostkey);
             client._.clear();

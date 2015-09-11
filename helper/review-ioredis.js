@@ -7,37 +7,75 @@ const FakeIoRedis = require('../index');
 
 function* review() {
     const client = new (this.creator)();
-    const sub = new (this.creator)();
 
-    const r = sub.on('pmessage', function (pattern, channel, message) {
-        console.log('sub.on(pmesssage):', pattern, ',', channel, '-> ', message);
-    });
-    console.log('IoRedis', r instanceof IoRedis, ', FakeIoRedis', r instanceof FakeIoRedis);
+    yield client.del('myzset');
 
-    sub.on('message', function (channel, message) {
-        console.log('sub.on(messsage):', channel, '-> ', message);
-    });
+    console.log(yield client.zadd('myzset', 1, 'one'));
+    console.log(yield client.zadd('myzset', 1, 'one'));
+    console.log(yield client.zadd('myzset', 2, 'one'));
 
-    console.log('psubscribe', yield sub.psubscribe('t?st:gogo:1234'));
-    console.log('psubscribe', yield sub.psubscribe('test:gogo:1234'));
-    console.log('psubscribe', yield sub.psubscribe('test:?ogo:1234aa'));
-    console.log('psubscribe', yield sub.psubscribe('test:gogo:*'));
-    console.log('subscribe', yield sub.subscribe('test:gogo:1234aa'));
+    console.log(yield client.zrange('myzset', 0, -1));
+    console.log(yield client.zrange('myzset', 0, -1, 'withscores'));
 
-    const sub2 = new (this.creator)();
-    console.log('subscribe2', yield sub2.subscribe('test:gogo:1234'));
+    console.log(yield client.zadd('myzset', 3, 'three'));
+    console.log(yield client.zadd('myzset', 4, 'four'));
 
+    console.log(yield client.zrange('myzset', 0, -1));
+    console.log(yield client.zrange('myzset', 0, -1, 'withscores'));
 
-    console.log('publish:', yield client.publish('test:gogo:1234', 'hello world'));
+    console.log(yield client.zrem('myzset', 'one'));
 
-    console.log('unsubscribe', yield sub.unsubscribe('test:gogo:1234'));
-    console.log('publish:', yield client.publish('test:gogo:1234', 'hello world'));
+    console.log(yield client.zrange('myzset', 0, -1));
+    console.log(yield client.zrange('myzset', 0, -1, 'withscores'));
 
-    console.log('unpsubscribe', yield sub.punsubscribe('test:gogo:1234'));
-    console.log('publish:', yield client.publish('test:gogo:1234', 'hello world'));
+    console.log(yield client.zrank('myzset', 'three'));
+    console.log(yield client.zrank('myzset', 'four'));
+    console.log(yield client.zrank('myzset', 'one'));
+
+    console.log(yield client.zadd('myzset', 1, 'one'));
+    console.log(yield client.zadd('myzset', 2, 'two'));
+
+    console.log(yield client.zrange('myzset', 0, -1));
+    console.log(yield client.zrangebyscore('myzset', '-inf', '+inf'));
+    console.log(yield client.zrangebyscore('myzset', 2, '+inf'));
+    console.log(yield client.zrangebyscore('myzset', 2, 3));
+    console.log(yield client.zrangebyscore('myzset', '(2', 3));
+    console.log(yield client.zrangebyscore('myzset', '(2', '3'));
+    console.log(yield client.zrangebyscore('myzset', '(2', '(3'));
+    console.log(yield client.zrangebyscore('myzset', '(2', 3, 'withscores'));
+
+    console.log(yield client.zadd('myzset', 1, 'one1', 1, 'one2', 1, 'one2'));
+    console.log(yield client.zrange('myzset', 0, -1));
+    console.log(yield client.zrange('myzset', 0, -1, 'withscores'));
+
+    console.log(yield client.zrange('myzset', 2, 2));
+    console.log(yield client.zrange('myzset', 2, 3));
+    console.log(yield client.zrange('myzset', 1, 3));
+    console.log(yield client.zrange('myzset', 0, 3));
+    console.log(yield client.zrange('myzset', 0, 0));
+    console.log(yield client.zrange('myzset', 0, 0, 'withscores'));
+
+    console.log(yield client.zrange('myzset', 0, -1));
+
+    console.log(yield client.zremrangebyscore('myzset', 1, 1));
+
+    console.log(yield client.zrange('myzset', 0, -1));
+
+    console.log(yield client.zadd('myzset', 1, 'one', 1, 'one1', 1, 'one2'));
+    console.log(yield client.zrange('myzset', 0, -1));
+
+    console.log(yield client.zremrangebyscore('myzset', 1, 2));
+
+    console.log(yield client.zrange('myzset', 0, -1));
+
+    console.log(yield client.zadd('myzset', 1, 'one', 1, 'one1', 1, 'one2', 2, 'two'));
+    console.log(yield client.zrange('myzset', 0, -1));
+
+    console.log(yield client.zremrangebyrank('myzset', 1, 2));
+
+    console.log(yield client.zrange('myzset', 0, -1));
 
     client.disconnect();
-    sub.disconnect();
 }
 
 

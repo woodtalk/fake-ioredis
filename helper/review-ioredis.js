@@ -13,7 +13,9 @@ function* review(Client) {
     }
 
     try {
-        console.log(yield client.sismember('myz', 'a'));
+        yield client.zadd('myz', '1', 'one', '1', 'one1', '1', 'one2', '1', 'one3', '2', 'two', '3', 'three', '4', 'four');
+        console.log(yield client.zrange('myz', 0, -1));
+        console.log(yield client.zrangebyscore('myz', '-inf', '+inf', 'limit', 0, 2, 'withscores'));
     } catch (e) {
         console.error(e.name);
         console.error(e.stack);

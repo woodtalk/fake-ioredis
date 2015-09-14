@@ -88,16 +88,14 @@ class FakeIoRedis {
             key = key.toString();
         }
 
-        if (typeof value !== 'string') {
-            value = value.toString();
-        }
-
         const remoteHost = remoteHosts[this._.remoteHostKey];
 
-        if (remoteHost.meta.hasOwnProperty(key)) {
-            if (remoteHost.meta[key] !== 'string') {
-                throw new ReplyError(typeErrMsg);
-            }
+        if (remoteHost.meta.hasOwnProperty(key) && remoteHost.meta[key] !== 'string') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        if (typeof value !== 'string') {
+            value = value.toString();
         }
 
         remoteHost.mem[key] = value;
@@ -112,7 +110,7 @@ class FakeIoRedis {
         let r = 0;
 
         for (let key of keys) {
-            if (typeof key === 'string') {
+            if (typeof key !== 'string') {
                 key = key.toString();
             }
 
@@ -153,7 +151,7 @@ class FakeIoRedis {
 
         const result = [];
 
-        for (var key in remoteHosts[this._.remoteHostKey].mem) {
+        for (let key in remoteHosts[this._.remoteHostKey].mem) {
             if (testRedisPattern(pattern, key) === false) {
                 continue;
             }
@@ -170,24 +168,23 @@ class FakeIoRedis {
         }
 
         const mem = remoteHosts[this._.remoteHostKey].mem;
-        var meta = remoteHosts[this._.remoteHostKey].meta;
+        const meta = remoteHosts[this._.remoteHostKey].meta;
 
-        if ((key in mem) === false) {
+        if (!mem.hasOwnProperty(key)) {
             mem[key] = new Set();
             meta[key] = 'set';
         }
-
-        const setData = mem[key];
-
         if (meta[key] !== 'set') {
             throw new ReplyError(typeErrMsg);
         }
+
+        const setData = mem[key];
 
         values = Array.prototype.slice.call(arguments, 1);
 
         let r = 0;
         for (let value of values) {
-            if (typeof value === 'string') {
+            if (typeof value !== 'string') {
                 value = value.toString();
             }
             if (!setData.has(value)) {
@@ -215,7 +212,7 @@ class FakeIoRedis {
 
         let r = 0;
         for (let value of values) {
-            if (typeof value === 'string') {
+            if (typeof value !== 'string') {
                 value = value.toString();
             }
             if (remoteHost.mem[key].delete(value)) {
@@ -231,14 +228,14 @@ class FakeIoRedis {
             key = key.toString();
         }
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if ((key in remoteHost.mem) === false) {
+        if (remoteHost.meta[key] === undefined) {
             return 0;
         }
         if (remoteHost.meta[key] !== 'set') {
             throw new ReplyError(typeErrMsg);
         }
 
-        if (typeof value === 'string') {
+        if (typeof value !== 'string') {
             value = value.toString();
         }
 
@@ -252,7 +249,7 @@ class FakeIoRedis {
         if (typeof key !== 'string') {
             key = key.toString();
         }
-        if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
+        if (remoteHosts[this._.remoteHostKey].meta[key] === undefined) {
             return 0;
         }
         if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
@@ -365,12 +362,12 @@ class FakeIoRedis {
         const valueScorePairs = new Map();
         for (let i = 0; i < values.length; i += 2) {
             let score = values[i];
-            if (typeof score === 'string') {
+            if (typeof score !== 'string') {
                 score = score.toString();
             }
 
             let value = values[i + 1];
-            if (typeof value === 'string') {
+            if (typeof value !== 'string') {
                 value = value.toString();
             }
 
@@ -429,6 +426,9 @@ class FakeIoRedis {
 
     *zrange(key, start, end, withscores) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return [];
+        }
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
         }
@@ -462,6 +462,9 @@ class FakeIoRedis {
 
     *zrangebyscore(key, start, end, withscores) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return [];
+        }
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
         }
@@ -519,58 +522,17 @@ class FakeIoRedis {
         return r;
     }
 
-    *zrem(key, values) {
-        values = Array.prototype.slice.call(arguments, 1);
-
-        const remoteHost = remoteHosts[this._.remoteHostKey];
-        if (remoteHost.meta[key] !== 'zset') {
-            throw new ReplyError(typeErrMsg);
-        }
-        const mem = remoteHost.mem[key];
-
-        let r = 0;
-        for (let value of values) {
-            if (typeof value === 'string') {
-                value = value.toString();
-            }
-
-            if (mem.scores.has(value)) {
-                const score = mem.scores.get(value);
-                mem.scores.delete(value);
-
-                const valueArray = mem.valueArrays.get(score);
-                valueArray.splice(valueArray.indexOf(value), 1);
-                if (valueArray.length !== 0) {
-                    mem.valueArrays.set(score, valueArray);
-                } else {
-                    mem.valueArrays.delete(score);
-                }
-
-                r++;
-            }
-        }
-
-        return r;
-    }
-
-    *zremrangebyscore(key, start, end) {
-        const values = yield this.zrangebyscore(key, start, end);
-        return yield this.zrem.apply(this, [key].concat(values));
-    }
-
-    *zremrangebyrank(key, start, end) {
-        const values = yield this.zrange(key, start, end);
-        return yield this.zrem.apply(this, [key].concat(values));
-    }
-
     *zrank(key, value) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return null;
+        }
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
         }
         const mem = remoteHost.mem[key];
 
-        if (typeof value === 'string') {
+        if (typeof value !== 'string') {
             value = value.toString();
         }
 
@@ -592,6 +554,58 @@ class FakeIoRedis {
         }
 
         return rank;
+    }
+
+    *zrem(key, values) {
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return 0;
+        }
+        if (remoteHost.meta[key] !== 'zset') {
+            throw new ReplyError(typeErrMsg);
+        }
+        const mem = remoteHost.mem[key];
+
+        values = Array.prototype.slice.call(arguments, 1);
+
+        let r = 0;
+        for (let value of values) {
+            if (typeof value !== 'string') {
+                value = value.toString();
+            }
+
+            if (mem.scores.has(value)) {
+                const score = mem.scores.get(value);
+                mem.scores.delete(value);
+
+                const valueArray = mem.valueArrays.get(score);
+                valueArray.splice(valueArray.indexOf(value), 1);
+                if (valueArray.length !== 0) {
+                    mem.valueArrays.set(score, valueArray);
+                } else {
+                    mem.valueArrays.delete(score);
+                }
+
+                r++;
+            }
+        }
+
+        if (mem.scores.size === 0) {
+            delete remoteHost.mem[key];
+            delete remoteHost.meta[key];
+        }
+
+        return r;
+    }
+
+    *zremrangebyscore(key, start, end) {
+        const values = yield this.zrangebyscore(key, start, end);
+        return yield this.zrem.apply(this, [key].concat(values));
+    }
+
+    *zremrangebyrank(key, start, end) {
+        const values = yield this.zrange(key, start, end);
+        return yield this.zrem.apply(this, [key].concat(values));
     }
 
     disconnect() {

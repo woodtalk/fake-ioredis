@@ -28,13 +28,15 @@ const remoteHosts = {};
 
 
 // polyfill
-Array.from = function (foreachable) {
-    const r = [];
-    for (let e of foreachable) {
-        r.push(e);
-    }
-    return r;
-};
+if (Array.from === undefined) {
+    Array.from = function (foreachable) {
+        const r = [];
+        for (let e of foreachable) {
+            r.push(e);
+        }
+        return r;
+    };
+}
 
 function testRedisPattern(pattern, channel) {
     const rex = new RegExp(pattern.replace('?', '.').replace('*', '.*'));
@@ -537,7 +539,7 @@ class FakeIoRedis {
                 mem.scores.delete(value);
 
                 const valueArray = mem.valueArrays.get(score);
-                valueArray.splice(value, Number.MAX_VALUE);
+                valueArray.splice(valueArray.indexOf(value), 1);
                 if (valueArray.length !== 0) {
                     mem.valueArrays.set(score, valueArray);
                 } else {
@@ -551,10 +553,14 @@ class FakeIoRedis {
         return r;
     }
 
-    *zremrangebyscore() {
+    *zremrangebyscore(key, start, end) {
+        const values = yield this.zrangebyscore(key, start, end);
+        return yield this.zrem.apply(this, [key].concat(values));
     }
 
-    *zremrangebyrank() {
+    *zremrangebyrank(key, start, end) {
+        const values = yield this.zrange(key, start, end);
+        return yield this.zrem.apply(this, [key].concat(values));
     }
 
     *zrank(key, value) {
@@ -587,7 +593,6 @@ class FakeIoRedis {
 
         return rank;
     }
-
 
     disconnect() {
     }

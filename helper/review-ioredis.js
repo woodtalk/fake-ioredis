@@ -5,13 +5,19 @@ const IoRedis = require('ioredis');
 const FakeIoRedis = require('../index');
 
 
-function* review() {
-    const client = new (this.creator)();
+function* review(Client) {
+    const client = new Client();
+
+    for (let key of yield client.keys('*')) {
+        yield client.del(key);
+    }
 
     try {
-        yield client.zadd('string', 0, 'y', 0);
+        yield client.zadd('myz', '1', 'one', '1', 'one1', '1', 'one2', '1', 'one3', '2', 'two', '3', 'three', '4', 'four');
+        console.log(yield client.zrange('myz', 0, -1));
+        console.log(yield client.zrangebyscore('myz', '-inf', '+inf', 'limit', 0, 2, 'withscores'));
     } catch (e) {
-        console.log(e.name);
+        console.error(e.name);
         console.error(e.stack);
     }
 
@@ -24,8 +30,7 @@ const sleep = require('co-sleep');
 
 co(function* () {
     console.log('======<real>=======');
-    this.creator = IoRedis;
-    yield review;
+    yield review.apply(this, [IoRedis]);
 
     yield sleep(5);
 
@@ -33,8 +38,7 @@ co(function* () {
     console.log();
 
     console.log('======<fake>=======');
-    this.creator = FakeIoRedis;
-    yield review;
+    yield review.apply(this, [FakeIoRedis]);
 
     process.exit(0);
 }).catch(function (e) {

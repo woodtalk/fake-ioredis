@@ -68,7 +68,6 @@ describe('scenarios', function () {
             it('Sets', function* () {
                 const client = new FakeIoRedis(hostkey);
 
-                (yield client.sismember('temp', 'a', 'b')).should.be.eql(0);
                 (yield client.sadd('temp', 'a', 'b')).should.be.eql(2);
                 (yield client.sismember('temp', 'a')).should.be.eql(1);
                 (yield client.srem('temp', 'a', 'b')).should.be.eql(2);
@@ -271,8 +270,19 @@ describe('scenarios', function () {
                 (messageResults).should.be.length(0);
             });
 
-            it.only('zset', function* () {
+            it('zset', function* () {
                 const client = new FakeIoRedis(hostkey);
+
+                (yield client.exists('myzset')).should.be.eql(0);
+
+                (yield client.zadd('myzset', 1, 'one')).should.be.eql(1);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one']);
+
+                (yield client.zrem('myzset', 'one')).should.be.eql(1);
+
+                (yield client.zrange('myzset', 0, -1)).should.be.eql([]);
+                (yield client.exists('myzset')).should.be.eql(0);
 
                 (yield client.zadd('myzset', 1, 'one')).should.be.eql(1);
                 (yield client.zadd('myzset', 1, 'one')).should.be.eql(0);
@@ -311,6 +321,18 @@ describe('scenarios', function () {
                 (yield client.zadd('myzset', 1, 'one1', 1, 'one3', 1, 'one2')).should.be.eql(3);
                 (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'one3', 'two', 'three', 'four']);
                 (yield client.zrange('myzset', 0, -1, 'withscores')).should.be.eql(['one', '1', 'one1', '1', 'one2', '1', 'one3', '1', 'two', '2', 'three', '3', 'four', '4']);
+                (yield client.zrangebyscore('myzset', '-inf', '+inf', 'withscores')).should.be.eql(['one', '1', 'one1', '1', 'one2', '1', 'one3', '1', 'two', '2', 'three', '3', 'four', '4']);
+
+                (yield client.zrangebyscore('myzset', '-inf', '+inf', 'limit', 0, 1, 'withscores')).should.be.eql(['one', '1']);
+                (yield client.zrangebyscore('myzset', '-inf', '+inf', 'withscores', 'limit', 0, 1)).should.be.eql(['one', '1']);
+
+                try {
+                    yield client.zrangebyscore('myzset', '-inf', '+inf', 'limit', 'withscores', 0, 1);
+                } catch (e) {
+                    (e.name).should.be.eql('ReplyError');
+                    var check = true;
+                }
+                (check).should.be.true();
 
                 (yield client.zrange('myzset', 2, 2)).should.be.eql(['one2']);
                 (yield client.zrange('myzset', 2, 3)).should.be.eql(['one2', 'one3']);
@@ -339,6 +361,22 @@ describe('scenarios', function () {
                 (yield client.zremrangebyrank('myzset', 1, 2)).should.be.eql(2);
 
                 (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'two', 'three', 'four']);
+            });
+
+            it('empty and get', function* () {
+                const client = new FakeIoRedis(hostkey);
+
+                (yield client.exists('myzset')).should.be.eql(0);
+
+                (yield client.zrangebyscore('myzset', '-inf', '+inf')).should.be.eql([]);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql([]);
+
+                (yield client.zrem('myzset', 'aa', 'adfasf')).should.be.eql(0);
+
+                should(yield client.zrank('myzset', 'aa')).it.is.null();
+
+                (yield client.sismember('temp', 'a', 'b')).should.be.eql(0);
+                (yield client.scard('temp')).should.be.eql(0);
             });
         });
     }

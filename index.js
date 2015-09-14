@@ -492,7 +492,35 @@ class FakeIoRedis {
     *zremrangebyrank() {
     }
 
-    *zrank() {
+    *zrank(key, value) {
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] !== 'zset') {
+            throw new ReplyError(typeErrMsg);
+        }
+        const mem = remoteHost.mem[key];
+
+        if (typeof value === 'string') {
+            value = value.toString();
+        }
+
+        const score = mem.scores.get(value);
+        if (!score) {
+            return null;
+        }
+
+        let rank = 0;
+        for (let pair of mem.valueArrays) {
+            let s = pair[0];
+            let valueArray = pair[1];
+            if (s === score) {
+                rank += valueArray.indexOf(value);
+                break;
+            }
+
+            rank += valueArray.length;
+        }
+
+        return rank;
     }
 
 

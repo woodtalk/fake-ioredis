@@ -448,7 +448,14 @@ class FakeIoRedis {
             }
         }
 
-        return r;
+        let realEnd = end + 1;
+        if (withscores === 'withscores') {
+            if (end !== -1) {
+                realEnd *= 2;
+            }
+            start *= 2;
+        }
+        return r.slice(start, end === -1 ? undefined : realEnd);
     }
 
     *zrangebyscore(key, start, end, withscores) {

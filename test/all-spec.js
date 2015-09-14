@@ -313,31 +313,32 @@ describe('scenarios', function () {
                 (yield client.zrange('myzset', 0, -1, 'withscores')).should.be.eql(['one', '1', 'one1', '1', 'one2', '1', 'one3', '1', 'two', '2', 'three', '3', 'four', '4']);
 
                 (yield client.zrange('myzset', 2, 2)).should.be.eql(['one2']);
-                (yield client.zrange('myzset', 2, 3)).should.be.eql(['one2', 'two']);
-                (yield client.zrange('myzset', 1, 3)).should.be.eql(['one1', 'one2', 'two']);
-                (yield client.zrange('myzset', 0, 3)).should.be.eql(['one', 'one1', 'one2', 'two']);
+                (yield client.zrange('myzset', 2, 3)).should.be.eql(['one2', 'one3']);
+                (yield client.zrange('myzset', 1, 3)).should.be.eql(['one1', 'one2', 'one3']);
+                (yield client.zrange('myzset', 0, 3)).should.be.eql(['one', 'one1', 'one2', 'one3']);
                 (yield client.zrange('myzset', 0, 0)).should.be.eql(['one']);
                 (yield client.zrange('myzset', 0, 0, 'withscores')).should.be.eql(['one', '1']);
+                (yield client.zrange('myzset', 3, 5, 'withscores')).should.be.eql(['one3', '1', 'two', '2', 'three', '3']);
 
-                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'one3', 'two', 'three', 'four']);
 
                 (yield client.zremrangebyscore('myzset', 1, 1)).should.be.eql(3);
 
                 (yield client.zrange('myzset', 0, -1)).should.be.eql(['two', 'three', 'four']);
 
                 (yield client.zadd('myzset', 1, 'one', 1, 'one1', 1, 'one2')).should.be.eql(3);
-                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'one3', 'two', 'three', 'four']);
 
                 (yield client.zremrangebyscore('myzset', 1, 2)).should.be.eql(4);
 
                 (yield client.zrange('myzset', 0, -1)).should.be.eql(['three', 'four']);
 
                 (yield client.zadd('myzset', 1, 'one', 1, 'one1', 1, 'one2', 2, 'two')).should.be.eql(4);
-                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'one3', 'two', 'three', 'four']);
 
                 (yield client.zremrangebyrank('myzset', 1, 2)).should.be.eql(2);
 
-                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'three', 'four']);
+                (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'two', 'three', 'four']);
             });
         });
     }

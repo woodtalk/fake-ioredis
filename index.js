@@ -360,7 +360,7 @@ class FakeIoRedis {
             throw new ReplyError(syntaxErrMsg);
         }
 
-        const scoreAndValues = new Map();
+        const valueScorePairs = new Map();
         for (let i = 0; i < values.length; i += 2) {
             let score = values[i];
             if (typeof score === 'string') {
@@ -372,7 +372,7 @@ class FakeIoRedis {
                 value = value.toString();
             }
 
-            scoreAndValues.set(score, value);
+            valueScorePairs.set(value, score);
         }
 
         const remoteHost = remoteHosts[this._.remoteHostKey];
@@ -391,9 +391,9 @@ class FakeIoRedis {
         const mem = remoteHost.mem[key];
 
         let r = 0;
-        for (let scoreAnValue of scoreAndValues) {
-            let score = scoreAnValue[0];
-            let value = scoreAnValue[1];
+        for (let pair of valueScorePairs) {
+            let value = pair[0];
+            let score = pair[1];
 
             if (!mem.scores.has(value)) {
                 r++;
@@ -440,9 +440,11 @@ class FakeIoRedis {
 
         let r = [];
         for (let score of scores) {
-            r = r.concat(mem.valueArrays.get(score));
-            if (withscores === 'withscores') {
-                r = r.concat(['' + score]);
+            for (let value of mem.valueArrays.get(score)) {
+                r.push(value);
+                if (withscores === 'withscores') {
+                    r.push('' + score);
+                }
             }
         }
 

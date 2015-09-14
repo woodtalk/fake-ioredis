@@ -27,17 +27,6 @@ function getInitMem() {
 const remoteHosts = {};
 
 
-// polyfill
-if (Array.from === undefined) {
-    Array.from = function (foreachable) {
-        const r = [];
-        for (let e of foreachable) {
-            r.push(e);
-        }
-        return r;
-    };
-}
-
 function testRedisPattern(pattern, channel) {
     const rex = new RegExp(pattern.replace('?', '.').replace('*', '.*'));
     return (rex).test(channel);
@@ -460,7 +449,7 @@ class FakeIoRedis {
         return r.slice(start, end === -1 ? undefined : realEnd);
     }
 
-    *zrangebyscore(key, start, end, withscores) {
+    *zrangebyscore(key, start, end, options) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
         if (remoteHost.meta[key] === undefined) {
             return [];
@@ -511,15 +500,54 @@ class FakeIoRedis {
         }
         end = realEnd;
 
-        let r = [];
-        for (let s of scores.slice(scores.indexOf(start), scores.indexOf(end) + 1)) {
-            r = r.concat(mem.valueArrays.get(s));
-            if (withscores === 'withscores') {
-                r = r.concat(['' + s]);
+        options = Array.prototype.slice.call(arguments, 3);
+        let withscores = null;
+        let offset = null;
+        let count = null;
+        for (let i = 0; i < options.length; i++) {
+            const option = options[i];
+            if (option === 'withscores') {
+                withscores = option;
+                continue;
+            }
+
+            if (option === 'limit') {
+                if (options.length - i < 2) {
+                    throw new ReplyError(syntaxErrMsg);
+                }
+
+                offset = +options[++i];
+                count = +options[++i];
+
+                if (isNaN(offset)) {
+                    throw new ReplyError(syntaxErrMsg);
+                }
+
+                if (isNaN(count)) {
+                    throw new ReplyError(syntaxErrMsg);
+                }
             }
         }
 
-        return r;
+        let r = [];
+        for (let s of scores.slice(scores.indexOf(start), scores.indexOf(end) + 1)) {
+            for (let v of mem.valueArrays.get(s)) {
+                r.push(v);
+                if (withscores === 'withscores') {
+                    r.push('' + s);
+                }
+            }
+        }
+
+        if (offset === null) {
+            return r;
+        }
+
+        if (withscores !== 'withscores') {
+            return r.slice(offset * 2, (offset + count) * 2 + 1);
+        } else {
+            return r.slice(offset, offset + count + 1);
+        }
     }
 
     *zrank(key, value) {

@@ -398,10 +398,10 @@ class FakeIoRedis {
             if (!mem.scores.has(value)) {
                 r++;
             } else {
-                const t = mem.valueArrays.get(mem.scores.get(value));
-                t.splice(value, Number.MAX_VALUE);
-                if (t.length !== 0) {
-                    mem.valueArrays.set(mem.scores.get(value), t);
+                const valueArray = mem.valueArrays.get(mem.scores.get(value));
+                valueArray.splice(value, Number.MAX_VALUE);
+                if (valueArray.length !== 0) {
+                    mem.valueArrays.set(mem.scores.get(value), valueArray);
                 } else {
                     mem.valueArrays.delete(mem.scores.get(value));
                 }
@@ -452,7 +452,38 @@ class FakeIoRedis {
     *zrangebyscore() {
     }
 
-    *zrem() {
+    *zrem(key, values) {
+        values = Array.prototype.slice.call(arguments, 1);
+
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] !== 'zset') {
+            throw new ReplyError(typeErrMsg);
+        }
+        const mem = remoteHost.mem[key];
+
+        let r = 0;
+        for (let value of values) {
+            if (typeof value === 'string') {
+                value = value.toString();
+            }
+
+            if (mem.scores.has(value)) {
+                const score = mem.scores.get(value);
+                mem.scores.delete(value);
+
+                const valueArray = mem.valueArrays.get(score);
+                valueArray.splice(value, Number.MAX_VALUE);
+                if (valueArray.length !== 0) {
+                    mem.valueArrays.set(score, valueArray);
+                } else {
+                    mem.valueArrays.delete(score);
+                }
+
+                r++;
+            }
+        }
+
+        return r;
     }
 
     *zremrangebyscore() {

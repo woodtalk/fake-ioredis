@@ -360,14 +360,27 @@ class FakeIoRedis {
             throw new ReplyError(syntaxErrMsg);
         }
 
-        const scoreAndValues = {};
+        const scoreAndValues = new Map();
         for (let i = 0; i < values.length; i += 2) {
-            scoreAndValues[values[i]] = values[i + 1];
+            let score = values[i];
+            if (typeof score === 'string') {
+                score = score.toString();
+            }
+
+            let value = values[i + 1];
+            if (typeof value === 'string') {
+                value = value.toString();
+            }
+
+            scoreAndValues.set(score, value);
         }
 
         const remoteHost = remoteHosts[this._.remoteHostKey];
         if (!remoteHost.mem.hasOwnProperty(key)) {
-            remoteHost.mem[key] = new Map();
+            remoteHost.mem[key] = {
+                scores: new Map(),
+                valueArrays: new Map()
+            };
             remoteHost.meta[key] = 'zset';
         }
 
@@ -375,37 +388,62 @@ class FakeIoRedis {
             throw new ReplyError(typeErrMsg);
         }
 
+        const mem = remoteHost.mem[key];
+
         let r = 0;
-        for (let score in scoreAndValues) {
-            if (typeof score === 'string') {
-                score = score.toString();
-            }
-            if (!remoteHost.mem[key].has(scoreAndValues[score])) {
+        for (let scoreAnValue of scoreAndValues) {
+            let score = scoreAnValue[0];
+            let value = scoreAnValue[1];
+
+            if (!mem.scores.has(value)) {
                 r++;
+            } else {
+                const t = mem.valueArrays.get(mem.scores.get(value));
+                t.splice(value, Number.MAX_VALUE);
+                if (t.length !== 0) {
+                    mem.valueArrays.set(mem.scores.get(value), t);
+                } else {
+                    mem.valueArrays.delete(mem.scores.get(value));
+                }
             }
-            remoteHost.mem[key].set(scoreAndValues[score], score);
+
+            mem.scores.set(value, score);
+
+            if (!mem.valueArrays.has(score)) {
+                mem.valueArrays.set(score, []);
+            }
+
+            const oldArray = mem.valueArrays.get(score);
+            oldArray.push(value);
+            oldArray.sort(function (x, y) {
+                return x.toString() < y.toString() ? -1 : 1;
+            });
+
+            mem.valueArrays.set(score, oldArray);
         }
 
         return r;
     }
 
-    *zrange(key, start, end) {
+    *zrange(key, start, end, isWithscores) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
         }
+        const mem = remoteHost.mem[key];
 
-        const values = [];
-        var mem = remoteHost.mem[key];
-        for (let v of mem.keys()) {
-            values.push(v);
+        const scores = [];
+        for (let v of mem.valueArrays.keys()) {
+            scores.push(v);
         }
+        scores.sort();
 
-        values.sort();
-
-        const r = [];
-        for (let k of values) {
-            r.push(mem.get(k));
+        let r = [];
+        for (let score of scores) {
+            r = r.concat(mem.valueArrays.get(score));
+            if (isWithscores === 'withscores') {
+                r = r.concat(['' + score]);
+            }
         }
 
         return r;

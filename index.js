@@ -94,7 +94,7 @@ class FakeIoRedis {
     }
 
     *'del'(keys) {
-        keys = Array.prototype.slice.call(arguments);
+        keys = Array.prototype.slice.call(arguments, this.del.length - 1);
 
         let r = 0;
 
@@ -169,7 +169,7 @@ class FakeIoRedis {
 
         const setData = mem[key];
 
-        values = Array.prototype.slice.call(arguments, 1);
+        values = Array.prototype.slice.call(arguments, this.sadd.length - 1);
 
         let r = 0;
         for (let value of values) {
@@ -197,7 +197,7 @@ class FakeIoRedis {
             throw new ReplyError(typeErrMsg);
         }
 
-        values = Array.prototype.slice.call(arguments, 1);
+        values = Array.prototype.slice.call(arguments, this.srem.length - 1);
 
         let r = 0;
         for (let value of values) {
@@ -343,7 +343,7 @@ class FakeIoRedis {
     }
 
     *zadd(key, values) {
-        values = Array.prototype.slice.call(arguments, 1);
+        values = Array.prototype.slice.call(arguments, this.zadd.length - 1);
         if (values.length % 2 !== 0) {
             throw new ReplyError(syntaxErrMsg);
         }
@@ -500,7 +500,7 @@ class FakeIoRedis {
         }
         end = realEnd;
 
-        options = Array.prototype.slice.call(arguments, 3);
+        options = Array.prototype.slice.call(arguments, this.zrangebyscore.length - 1);
         let withscores = null;
         let offset = null;
         let count = null;
@@ -594,7 +594,7 @@ class FakeIoRedis {
         }
         const mem = remoteHost.mem[key];
 
-        values = Array.prototype.slice.call(arguments, 1);
+        values = Array.prototype.slice.call(arguments, this.zrem.length - 1);
 
         let r = 0;
         for (let value of values) {

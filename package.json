@@ -1,6 +1,6 @@
 {
   "name": "fake-ioredis",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,7 @@
     "fake-ioredis"
   ],
   "engines": {
+    "nodejs": ">=4.0.0",
     "iojs": ">=3.0.0"
   },
   "author": "woodtalk@daum.net",
@@ -24,11 +25,11 @@
   },
   "homepage": "https://github.com/woodtalk/fake-ioredis#readme",
   "devDependencies": {
-    "co": "^4.6.0",
-    "co-mocha": "^1.1.2",
-    "co-sleep": "0.0.1",
-    "ioredis": "^1.8.0",
-    "mocha": "^2.3.2",
-    "should": "^7.1.0"
+    "co": "latest",
+    "co-mocha": "latest",
+    "co-sleep": "latest",
+    "ioredis": "latest",
+    "mocha": "latest",
+    "should": "latest"
   }
 }

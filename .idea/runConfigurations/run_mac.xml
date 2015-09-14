@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="run-mac" type="NodeJSConfigurationType" factoryName="Node.js" path-to-node="/usr/local/bin/iojs" path-to-js-file="helper/review-ioredis.js" working-dir="$PROJECT_DIR$">
+    <method />
+  </configuration>
+</component>

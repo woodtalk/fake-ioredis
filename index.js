@@ -425,7 +425,7 @@ class FakeIoRedis {
         return r;
     }
 
-    *zrange(key, start, end, isWithscores) {
+    *zrange(key, start, end, withscores) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
@@ -441,7 +441,7 @@ class FakeIoRedis {
         let r = [];
         for (let score of scores) {
             r = r.concat(mem.valueArrays.get(score));
-            if (isWithscores === 'withscores') {
+            if (withscores === 'withscores') {
                 r = r.concat(['' + score]);
             }
         }
@@ -449,7 +449,63 @@ class FakeIoRedis {
         return r;
     }
 
-    *zrangebyscore() {
+    *zrangebyscore(key, start, end, withscores) {
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] !== 'zset') {
+            throw new ReplyError(typeErrMsg);
+        }
+        const mem = remoteHost.mem[key];
+
+        const scores = [];
+        for (let s of mem.valueArrays.keys()) {
+            scores.push(s);
+        }
+        scores.sort();
+
+        start = start === '-inf' ? scores[0] : start;
+        end = end === '+inf' ? scores[scores.length - 1] : end;
+
+        start = start.toString().startsWith('(') ? +start.toString().slice(1) + 1 : start;
+        end = end.toString().startsWith('(') ? +end.toString().slice(1) - 1 : end;
+
+        start = +start;
+        end = +end;
+
+
+        let realStart = null;
+        for (let s of scores) {
+            if (s >= start) {
+                realStart = s;
+                break;
+            }
+        }
+        if (realStart === null) {
+            throw new Error();
+        }
+        start = realStart;
+
+        let realEnd = null;
+        for (let s of scores.reverse()) {
+            if (s <= end) {
+                realEnd = s;
+                break;
+            }
+        }
+        scores.reverse();
+        if (realEnd === null) {
+            throw new Error();
+        }
+        end = realEnd;
+
+        let r = [];
+        for (let s of scores.slice(scores.indexOf(start), scores.indexOf(end) + 1)) {
+            r = r.concat(mem.valueArrays.get(s));
+            if (withscores === 'withscores') {
+                r = r.concat(['' + s]);
+            }
+        }
+
+        return r;
     }
 
     *zrem(key, values) {

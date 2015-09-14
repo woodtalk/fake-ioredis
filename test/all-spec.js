@@ -308,7 +308,7 @@ describe('scenarios', function () {
                 (yield client.zrangebyscore('myzset', '(2', 3, 'withscores')).should.be.eql(['three', '3']);
                 (yield client.zrangebyscore('myzset', '(2', '(3')).should.be.eql([]);
 
-                (yield client.zadd('myzset', 1, 'one1', 1, 'one2', 1, 'one3')).should.be.eql(2);
+                (yield client.zadd('myzset', 1, 'one1', 1, 'one2', 1, 'one3')).should.be.eql(3);
                 (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'one1', 'one2', 'two', 'three', 'four']);
                 (yield client.zrange('myzset', 0, -1, 'withscores')).should.be.eql(['one', '1', 'one1', '1', 'one2', '1', 'two', '2', 'three', '3', 'four', '4']);
 

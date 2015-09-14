@@ -27,17 +27,6 @@ function getInitMem() {
 const remoteHosts = {};
 
 
-// polyfill
-if (Array.from === undefined) {
-    Array.from = function (foreachable) {
-        const r = [];
-        for (let e of foreachable) {
-            r.push(e);
-        }
-        return r;
-    };
-}
-
 function testRedisPattern(pattern, channel) {
     const rex = new RegExp(pattern.replace('?', '.').replace('*', '.*'));
     return (rex).test(channel);
@@ -88,16 +77,14 @@ class FakeIoRedis {
             key = key.toString();
         }
 
-        if (typeof value !== 'string') {
-            value = value.toString();
-        }
-
         const remoteHost = remoteHosts[this._.remoteHostKey];
 
-        if (remoteHost.meta.hasOwnProperty(key)) {
-            if (remoteHost.meta[key] !== 'string') {
-                throw new ReplyError(typeErrMsg);
-            }
+        if (remoteHost.meta.hasOwnProperty(key) && remoteHost.meta[key] !== 'string') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        if (typeof value !== 'string') {
+            value = value.toString();
         }
 
         remoteHost.mem[key] = value;
@@ -107,12 +94,12 @@ class FakeIoRedis {
     }
 
     *'del'(keys) {
-        keys = Array.prototype.slice.call(arguments);
+        keys = Array.prototype.slice.call(arguments, this.del.length - 1);
 
         let r = 0;
 
         for (let key of keys) {
-            if (typeof key === 'string') {
+            if (typeof key !== 'string') {
                 key = key.toString();
             }
 
@@ -153,7 +140,7 @@ class FakeIoRedis {
 
         const result = [];
 
-        for (var key in remoteHosts[this._.remoteHostKey].mem) {
+        for (let key in remoteHosts[this._.remoteHostKey].mem) {
             if (testRedisPattern(pattern, key) === false) {
                 continue;
             }
@@ -170,24 +157,23 @@ class FakeIoRedis {
         }
 
         const mem = remoteHosts[this._.remoteHostKey].mem;
-        var meta = remoteHosts[this._.remoteHostKey].meta;
+        const meta = remoteHosts[this._.remoteHostKey].meta;
 
-        if ((key in mem) === false) {
+        if (!mem.hasOwnProperty(key)) {
             mem[key] = new Set();
             meta[key] = 'set';
         }
-
-        const setData = mem[key];
-
         if (meta[key] !== 'set') {
             throw new ReplyError(typeErrMsg);
         }
 
-        values = Array.prototype.slice.call(arguments, 1);
+        const setData = mem[key];
+
+        values = Array.prototype.slice.call(arguments, this.sadd.length - 1);
 
         let r = 0;
         for (let value of values) {
-            if (typeof value === 'string') {
+            if (typeof value !== 'string') {
                 value = value.toString();
             }
             if (!setData.has(value)) {
@@ -211,11 +197,11 @@ class FakeIoRedis {
             throw new ReplyError(typeErrMsg);
         }
 
-        values = Array.prototype.slice.call(arguments, 1);
+        values = Array.prototype.slice.call(arguments, this.srem.length - 1);
 
         let r = 0;
         for (let value of values) {
-            if (typeof value === 'string') {
+            if (typeof value !== 'string') {
                 value = value.toString();
             }
             if (remoteHost.mem[key].delete(value)) {
@@ -231,14 +217,14 @@ class FakeIoRedis {
             key = key.toString();
         }
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if ((key in remoteHost.mem) === false) {
+        if (remoteHost.meta[key] === undefined) {
             return 0;
         }
         if (remoteHost.meta[key] !== 'set') {
             throw new ReplyError(typeErrMsg);
         }
 
-        if (typeof value === 'string') {
+        if (typeof value !== 'string') {
             value = value.toString();
         }
 
@@ -252,7 +238,7 @@ class FakeIoRedis {
         if (typeof key !== 'string') {
             key = key.toString();
         }
-        if ((key in remoteHosts[this._.remoteHostKey].mem) === false) {
+        if (remoteHosts[this._.remoteHostKey].meta[key] === undefined) {
             return 0;
         }
         if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
@@ -357,7 +343,7 @@ class FakeIoRedis {
     }
 
     *zadd(key, values) {
-        values = Array.prototype.slice.call(arguments, 1);
+        values = Array.prototype.slice.call(arguments, this.zadd.length - 1);
         if (values.length % 2 !== 0) {
             throw new ReplyError(syntaxErrMsg);
         }
@@ -365,12 +351,12 @@ class FakeIoRedis {
         const valueScorePairs = new Map();
         for (let i = 0; i < values.length; i += 2) {
             let score = values[i];
-            if (typeof score === 'string') {
+            if (typeof score !== 'string') {
                 score = score.toString();
             }
 
             let value = values[i + 1];
-            if (typeof value === 'string') {
+            if (typeof value !== 'string') {
                 value = value.toString();
             }
 
@@ -429,6 +415,9 @@ class FakeIoRedis {
 
     *zrange(key, start, end, withscores) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return [];
+        }
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
         }
@@ -460,8 +449,11 @@ class FakeIoRedis {
         return r.slice(start, end === -1 ? undefined : realEnd);
     }
 
-    *zrangebyscore(key, start, end, withscores) {
+    *zrangebyscore(key, start, end, options) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return [];
+        }
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
         }
@@ -508,69 +500,67 @@ class FakeIoRedis {
         }
         end = realEnd;
 
-        let r = [];
-        for (let s of scores.slice(scores.indexOf(start), scores.indexOf(end) + 1)) {
-            r = r.concat(mem.valueArrays.get(s));
-            if (withscores === 'withscores') {
-                r = r.concat(['' + s]);
-            }
-        }
-
-        return r;
-    }
-
-    *zrem(key, values) {
-        values = Array.prototype.slice.call(arguments, 1);
-
-        const remoteHost = remoteHosts[this._.remoteHostKey];
-        if (remoteHost.meta[key] !== 'zset') {
-            throw new ReplyError(typeErrMsg);
-        }
-        const mem = remoteHost.mem[key];
-
-        let r = 0;
-        for (let value of values) {
-            if (typeof value === 'string') {
-                value = value.toString();
+        options = Array.prototype.slice.call(arguments, this.zrangebyscore.length - 1);
+        let withscores = null;
+        let offset = null;
+        let count = null;
+        for (let i = 0; i < options.length; i++) {
+            const option = options[i];
+            if (option === 'withscores') {
+                withscores = option;
+                continue;
             }
 
-            if (mem.scores.has(value)) {
-                const score = mem.scores.get(value);
-                mem.scores.delete(value);
-
-                const valueArray = mem.valueArrays.get(score);
-                valueArray.splice(valueArray.indexOf(value), 1);
-                if (valueArray.length !== 0) {
-                    mem.valueArrays.set(score, valueArray);
-                } else {
-                    mem.valueArrays.delete(score);
+            if (option === 'limit') {
+                if (options.length - i < 2) {
+                    throw new ReplyError(syntaxErrMsg);
                 }
 
-                r++;
+                offset = +options[++i];
+                count = +options[++i];
+
+                if (isNaN(offset)) {
+                    throw new ReplyError(syntaxErrMsg);
+                }
+
+                if (isNaN(count)) {
+                    throw new ReplyError(syntaxErrMsg);
+                }
             }
         }
 
-        return r;
-    }
+        let r = [];
+        for (let s of scores.slice(scores.indexOf(start), scores.indexOf(end) + 1)) {
+            for (let v of mem.valueArrays.get(s)) {
+                r.push(v);
+                if (withscores === 'withscores') {
+                    r.push('' + s);
+                }
+            }
+        }
 
-    *zremrangebyscore(key, start, end) {
-        const values = yield this.zrangebyscore(key, start, end);
-        return yield this.zrem.apply(this, [key].concat(values));
-    }
+        if (offset === null) {
+            return r;
+        }
 
-    *zremrangebyrank(key, start, end) {
-        const values = yield this.zrange(key, start, end);
-        return yield this.zrem.apply(this, [key].concat(values));
+        if (withscores !== 'withscores') {
+            return r.slice(offset * 2, (offset + count) * 2 + 1);
+        } else {
+            return r.slice(offset, offset + count + 1);
+        }
     }
 
     *zrank(key, value) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return null;
+        }
         if (remoteHost.meta[key] !== 'zset') {
             throw new ReplyError(typeErrMsg);
         }
         const mem = remoteHost.mem[key];
 
-        if (typeof value === 'string') {
+        if (typeof value !== 'string') {
             value = value.toString();
         }
 
@@ -592,6 +582,58 @@ class FakeIoRedis {
         }
 
         return rank;
+    }
+
+    *zrem(key, values) {
+        const remoteHost = remoteHosts[this._.remoteHostKey];
+        if (remoteHost.meta[key] === undefined) {
+            return 0;
+        }
+        if (remoteHost.meta[key] !== 'zset') {
+            throw new ReplyError(typeErrMsg);
+        }
+        const mem = remoteHost.mem[key];
+
+        values = Array.prototype.slice.call(arguments, this.zrem.length - 1);
+
+        let r = 0;
+        for (let value of values) {
+            if (typeof value !== 'string') {
+                value = value.toString();
+            }
+
+            if (mem.scores.has(value)) {
+                const score = mem.scores.get(value);
+                mem.scores.delete(value);
+
+                const valueArray = mem.valueArrays.get(score);
+                valueArray.splice(valueArray.indexOf(value), 1);
+                if (valueArray.length !== 0) {
+                    mem.valueArrays.set(score, valueArray);
+                } else {
+                    mem.valueArrays.delete(score);
+                }
+
+                r++;
+            }
+        }
+
+        if (mem.scores.size === 0) {
+            delete remoteHost.mem[key];
+            delete remoteHost.meta[key];
+        }
+
+        return r;
+    }
+
+    *zremrangebyscore(key, start, end) {
+        const values = yield this.zrangebyscore(key, start, end);
+        return yield this.zrem.apply(this, [key].concat(values));
+    }
+
+    *zremrangebyrank(key, start, end) {
+        const values = yield this.zrange(key, start, end);
+        return yield this.zrem.apply(this, [key].concat(values));
     }
 
     disconnect() {

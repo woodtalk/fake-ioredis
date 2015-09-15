@@ -31,5 +31,8 @@
     "ioredis": "latest",
     "mocha": "latest",
     "should": "latest"
+  },
+  "dependencies": {
+    "ioredis": "^1.8.0"
   }
 }

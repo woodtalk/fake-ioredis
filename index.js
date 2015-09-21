@@ -248,22 +248,37 @@ class FakeIoRedis {
         return remoteHosts[this._.remoteHostKey].mem[key].size;
     }
 
-    *spop(key, count) {
-        if (count === void 0 || count === null) {
-            count = 1;
-        }
-
+    *spop(key) {
         if (typeof key !== 'string') {
             key = key.toString();
         }
-        if (remoteHosts[this._.remoteHostKey].meta[key] === void 0) {
-            return 0;
+        const mem = remoteHosts[this._.remoteHostKey].mem[key];
+        if (mem === void 0) {
+            return null;
         }
         if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
             throw new ReplyError(typeErrMsg);
         }
 
+        const r = Array.from(mem)[Math.floor(Math.random() * (mem.size - 1))];
+        yield this.srem(key, r);
 
+        return r;
+    }
+
+    *smembers(key) {
+        if (typeof key !== 'string') {
+            key = key.toString();
+        }
+        const mem = remoteHosts[this._.remoteHostKey].mem[key];
+        if (mem === void 0) {
+            return null;
+        }
+        if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        return Array.from(mem);
     }
 
     *subscribe(channel) {

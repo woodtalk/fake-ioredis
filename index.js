@@ -217,7 +217,7 @@ class FakeIoRedis {
             key = key.toString();
         }
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if (remoteHost.meta[key] === undefined) {
+        if (remoteHost.meta[key] === void 0) {
             return 0;
         }
         if (remoteHost.meta[key] !== 'set') {
@@ -238,7 +238,7 @@ class FakeIoRedis {
         if (typeof key !== 'string') {
             key = key.toString();
         }
-        if (remoteHosts[this._.remoteHostKey].meta[key] === undefined) {
+        if (remoteHosts[this._.remoteHostKey].meta[key] === void 0) {
             return 0;
         }
         if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
@@ -246,6 +246,39 @@ class FakeIoRedis {
         }
 
         return remoteHosts[this._.remoteHostKey].mem[key].size;
+    }
+
+    *spop(key) {
+        if (typeof key !== 'string') {
+            key = key.toString();
+        }
+        const mem = remoteHosts[this._.remoteHostKey].mem[key];
+        if (mem === void 0) {
+            return null;
+        }
+        if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        const r = Array.from(mem)[Math.floor(Math.random() * (mem.size - 1))];
+        yield this.srem(key, r);
+
+        return r;
+    }
+
+    *smembers(key) {
+        if (typeof key !== 'string') {
+            key = key.toString();
+        }
+        const mem = remoteHosts[this._.remoteHostKey].mem[key];
+        if (mem === void 0) {
+            return null;
+        }
+        if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
+            throw new ReplyError(typeErrMsg);
+        }
+
+        return Array.from(mem);
     }
 
     *subscribe(channel) {
@@ -415,7 +448,7 @@ class FakeIoRedis {
 
     *zrange(key, start, end, withscores) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if (remoteHost.meta[key] === undefined) {
+        if (remoteHost.meta[key] === void 0) {
             return [];
         }
         if (remoteHost.meta[key] !== 'zset') {
@@ -446,12 +479,12 @@ class FakeIoRedis {
             }
             start *= 2;
         }
-        return r.slice(start, end === -1 ? undefined : realEnd);
+        return r.slice(start, end === -1 ? void 0 : realEnd);
     }
 
     *zrangebyscore(key, start, end, options) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if (remoteHost.meta[key] === undefined) {
+        if (remoteHost.meta[key] === void 0) {
             return [];
         }
         if (remoteHost.meta[key] !== 'zset') {
@@ -552,7 +585,7 @@ class FakeIoRedis {
 
     *zrank(key, value) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if (remoteHost.meta[key] === undefined) {
+        if (remoteHost.meta[key] === void 0) {
             return null;
         }
         if (remoteHost.meta[key] !== 'zset') {
@@ -586,7 +619,7 @@ class FakeIoRedis {
 
     *zrem(key, values) {
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if (remoteHost.meta[key] === undefined) {
+        if (remoteHost.meta[key] === void 0) {
             return 0;
         }
         if (remoteHost.meta[key] !== 'zset') {

@@ -68,7 +68,10 @@ describe('scenarios', function () {
             it('Sets', function* () {
                 const client = new FakeIoRedis(hostkey);
 
+                (yield client.smembers('temp')).should.be.eql([]);
+
                 (yield client.sadd('temp', 'a', 'b')).should.be.eql(2);
+                (yield client.smembers('temp')).should.be.eql(['a', 'b']);
                 (yield client.sismember('temp', 'a')).should.be.eql(1);
                 (yield client.srem('temp', 'a', 'b')).should.be.eql(2);
 

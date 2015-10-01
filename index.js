@@ -272,7 +272,7 @@ class FakeIoRedis {
         }
         const mem = remoteHosts[this._.remoteHostKey].mem[key];
         if (mem === void 0) {
-            return null;
+            return [];
         }
         if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
             throw new ReplyError(typeErrMsg);

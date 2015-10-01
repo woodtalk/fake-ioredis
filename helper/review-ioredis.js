@@ -11,11 +11,8 @@ function* review(Client) {
     for (let key of yield client.keys('*')) {
         yield client.del(key);
     }
-    console.log(yield client.sadd('s', 'a', 'b', 'c', 'd', 'e', 'f'));
 
     console.log(yield client.smembers('s'));
-    //console.log(yield client.spop('s'));
-
 
     client.disconnect();
 }

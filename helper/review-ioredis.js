@@ -12,7 +12,7 @@ function* review(Client) {
         console.log(yield client.del(key));
     }
 
-    console.log(yield client.del());
+    console.log(yield client.srem('tempaa'));
 
     client.disconnect();
 }
@@ -22,13 +22,13 @@ const co = require('co');
 const sleep = require('co-sleep');
 
 co(function* () {
-    console.log('======<real>=======');
-    yield review.apply(this, [IoRedis]);
+    //console.log('======<real>=======');
+    //yield review.apply(this, [IoRedis]);
 
-    yield sleep(5);
-
-    console.log();
-    console.log();
+    //yield sleep(5);
+    //
+    //console.log();
+    //console.log();
 
     console.log('======<fake>=======');
     yield review.apply(this, [FakeIoRedis]);

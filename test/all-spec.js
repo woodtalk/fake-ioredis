@@ -2,6 +2,7 @@
 'use strict';
 
 const FakeIoRedis = require('../index');
+const ReplyError = require('../ReplyError');
 
 const should = require('should');
 
@@ -21,14 +22,9 @@ describe('scenarios', function () {
             it('del', function* () {
                 const client = new FakeIoRedis(hostkey);
 
-                let check = false;
-                try {
+                (function* () {
                     yield client.del();
-                } catch (e) {
-                    check = true;
-                    (e.name).should.be.eql('ReplyError');
-                }
-                (check).should.be.eql(true);
+                }).should.throw(ReplyError);
 
                 yield client.set('aaa1', 'value');
                 yield client.set('aaa2', 'value');
@@ -85,24 +81,14 @@ describe('scenarios', function () {
                 (yield client.sismember('temp', 'a')).should.be.eql(1);
                 (yield client.srem('temp', 'a', 'b')).should.be.eql(2);
 
-                let check = false;
-                try {
+                (function* () {
                     yield client.set('temp', 's');
-                } catch (e) {
-                    check = true;
-                    (e.name).should.be.eql('ReplyError');
-                }
-                (check).should.be.true();
+                }).should.throw(ReplyError);
 
-                check = false;
                 yield client.set('string', 's');
-                try {
+                (function* () {
                     yield client.sadd('string', 'aaa');
-                } catch (e) {
-                    check = true;
-                    (e.name).should.be.eql('ReplyError');
-                }
-                (check).should.be.true();
+                }).should.throw(ReplyError);
             });
 
             it('pub/sub', function* () {
@@ -349,13 +335,9 @@ describe('scenarios', function () {
                 (yield client.zrangebyscore('myzset', '-inf', '+inf', 'limit', 0, 1, 'withscores')).should.be.eql(['one', '1']);
                 (yield client.zrangebyscore('myzset', '-inf', '+inf', 'withscores', 'limit', 0, 1)).should.be.eql(['one', '1']);
 
-                try {
+                (function* () {
                     yield client.zrangebyscore('myzset', '-inf', '+inf', 'limit', 'withscores', 0, 1);
-                } catch (e) {
-                    (e.name).should.be.eql('ReplyError');
-                    var check = true;
-                }
-                (check).should.be.true();
+                }).should.throw(ReplyError);
 
                 (yield client.zrange('myzset', 2, 2)).should.be.eql(['one2']);
                 (yield client.zrange('myzset', 2, 3)).should.be.eql(['one2', 'one3']);

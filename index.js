@@ -7,14 +7,7 @@ const valueErrMsg = 'ERR value is not a valid float';
 const syntaxErrMsg = 'ERR syntax error';
 const wrongNumberArgumentErrMsg = methodName => `ERR wrong number of arguments for '${methodName}' command`;
 
-class ReplyError extends Error {
-    constructor(message) {
-        super(message);
-
-        this.message = message;
-        super.name = 'ReplyError';
-    }
-}
+const ReplyError = require('./ReplyError');
 
 function getInitMem() {
     return {

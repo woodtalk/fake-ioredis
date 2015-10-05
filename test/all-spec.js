@@ -75,11 +75,21 @@ describe('scenarios', function () {
                 (yield client.sismember('temp', 'a')).should.be.eql(1);
                 (yield client.srem('temp', 'a', 'b')).should.be.eql(2);
 
+                let check = false;
+                try {
+                    yield client.set('temp', 's');
+                } catch (e) {
+                    check = true;
+                    (e.name).should.be.eql('ReplyError');
+                }
+                (check).should.be.true();
+
+                check = false;
                 yield client.set('string', 's');
                 try {
                     yield client.sadd('string', 'aaa');
                 } catch (e) {
-                    var check = true;
+                    check = true;
                     (e.name).should.be.eql('ReplyError');
                 }
                 (check).should.be.true();

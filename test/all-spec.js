@@ -20,6 +20,16 @@ describe('scenarios', function () {
 
             it('del', function* () {
                 const client = new FakeIoRedis(hostkey);
+
+                let check = false;
+                try {
+                    yield client.del();
+                } catch (e) {
+                    check = true;
+                    (e.name).should.be.eql('ReplyError');
+                }
+                (check).should.be.eql(true);
+
                 yield client.set('aaa1', 'value');
                 yield client.set('aaa2', 'value');
                 yield client.set('aaa3', 'value');

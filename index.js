@@ -5,6 +5,7 @@ const subErrMsg = 'Connection in subscriber mode, only subscriber commands may b
 const typeErrMsg = 'WRONGTYPE Operation against a key holding the wrong kind of value';
 const valueErrMsg = 'ERR value is not a valid float';
 const syntaxErrMsg = 'ERR syntax error';
+const wrongNumberArgumentErrMsg = methodName => `ERR wrong number of arguments for '${methodName}' command`;
 
 class ReplyError extends Error {
     constructor(message) {
@@ -95,6 +96,9 @@ class FakeIoRedis {
 
     ['del'](keys) {
         keys = Array.prototype.slice.call(arguments, this.del.length - 1);
+        if (keys.length === 0) {
+            throw new ReplyError(wrongNumberArgumentErrMsg('del'));
+        }
 
         let r = 0;
 

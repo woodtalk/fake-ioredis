@@ -9,10 +9,10 @@ function* review(Client) {
     const client = new Client();
 
     for (let key of yield client.keys('*')) {
-        yield client.del(key);
+        console.log(yield client.del(key));
     }
 
-    console.log(yield client.smembers('s'));
+    console.log(yield client.del());
 
     client.disconnect();
 }

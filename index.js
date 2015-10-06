@@ -238,20 +238,6 @@ class FakeIoRedis {
         return Promise.resolve(1);
     }
 
-    scard(key) {
-        if (typeof key !== 'string') {
-            key = key.toString();
-        }
-        if (remoteHosts[this._.remoteHostKey].meta[key] === void 0) {
-            return Promise.resolve(0);
-        }
-        if (remoteHosts[this._.remoteHostKey].meta[key] !== 'set') {
-            throw new ReplyError(typeErrMsg);
-        }
-
-        return Promise.resolve(remoteHosts[this._.remoteHostKey].mem[key].size);
-    }
-
     spop(key) {
         if (typeof key !== 'string') {
             key = key.toString();
@@ -502,7 +488,7 @@ class FakeIoRedis {
         for (let s of mem.valueArrays.keys()) {
             scores.push(s);
         }
-        scores.sort();
+        scores.sort((x, y) => parseInt(x) < parseInt(y) ? -1 : 1);
 
         start = start === '-inf' ? scores[0] : start;
         end = end === '+inf' ? scores[scores.length - 1] : end;
@@ -581,12 +567,13 @@ class FakeIoRedis {
         if (offset === null) {
             return Promise.resolve(r);
         }
-
-        if (withscores !== 'withscores') {
-            return Promise.resolve(r.slice(offset * 2, (offset + count) * 2 + 1));
+        if (withscores === 'withscores') {
+            r = r.slice(offset * 2, (offset + count) * 2);
         } else {
-            return Promise.resolve(r.slice(offset, offset + count + 1));
+            r = r.slice(offset, offset + count);
         }
+
+        return Promise.resolve(r);
     }
 
     zrank(key, value) {

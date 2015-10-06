@@ -401,6 +401,23 @@ describe('scenarios', function () {
                 (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn', 'userSn2']);
             });
 
+            it('zadd zrangebyscore spec', function* () {
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 20, 'usersn1');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 30, 'usersn2');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 30, 'usersn3');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 70, 'usersn4');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 100, 'usersn5');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 20, 'usersn6');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 30, 'usersn7');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 30, 'usersn8');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 70, 'usersn9');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 100, 'usersn10');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 1100, 'usersn11');
+                yield (new FakeIoRedis(hostkey)).zadd('temp', 1120, 'usersn12');
+
+                (yield (new FakeIoRedis(hostkey)).zrangebyscore('temp', 10, '+inf', 'limit', 0, 10)).should.be.eql(['usersn1', 'usersn6', 'usersn2', 'usersn3', 'usersn7', 'usersn8', 'usersn4', 'usersn9', 'usersn10', 'usersn5']);
+            });
+
             it('empty and get', function* () {
                 const client = new FakeIoRedis(hostkey);
 

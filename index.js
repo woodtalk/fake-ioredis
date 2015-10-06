@@ -428,12 +428,12 @@ class FakeIoRedis {
             if (!mem.scores.has(value)) {
                 r++;
             } else {
-                const valueArray = mem.valueArrays.get(mem.scores.get(value));
-                valueArray.splice(value, Number.MAX_VALUE);
-                if (valueArray.length !== 0) {
-                    mem.valueArrays.set(mem.scores.get(value), valueArray);
-                } else {
-                    mem.valueArrays.delete(mem.scores.get(value));
+                const oldScore = mem.scores.get(value);
+
+                const valueArray = mem.valueArrays.get(oldScore);
+                valueArray.splice(valueArray.indexOf(value), 1);
+                if (valueArray.length === 0) {
+                    mem.valueArrays.delete(oldScore);
                 }
             }
 
@@ -446,8 +446,6 @@ class FakeIoRedis {
             const oldArray = mem.valueArrays.get(score);
             oldArray.push(value);
             oldArray.sort((x, y) => x.toString() < y.toString() ? -1 : 1);
-
-            mem.valueArrays.set(score, oldArray);
         }
 
         return Promise.resolve(r);
@@ -467,7 +465,7 @@ class FakeIoRedis {
         for (let v of mem.valueArrays.keys()) {
             scores.push(v);
         }
-        scores.sort();
+        scores.sort((x, y) => parseInt(x) < parseInt(y) ? -1 : 1);
 
         let r = [];
         for (let score of scores) {
@@ -486,6 +484,7 @@ class FakeIoRedis {
             }
             start *= 2;
         }
+
         return Promise.resolve(r.slice(start, end === -1 ? void 0 : realEnd));
     }
 

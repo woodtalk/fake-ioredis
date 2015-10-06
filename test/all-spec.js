@@ -376,6 +376,31 @@ describe('scenarios', function () {
                 (yield client.zrange('myzset', 0, -1)).should.be.eql(['one', 'two', 'three', 'four']);
             });
 
+            it('zadd, zrange spec1', function* () {
+                (yield (new FakeIoRedis(hostkey)).zadd('temp', 300, 'userSn', 300, 'userSn2')).should.be.eql(2);
+                (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn', 'userSn2']);
+
+                (yield (new FakeIoRedis(hostkey)).zadd('temp', 700, 'userSn2')).should.be.eql(0);
+                (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn', 'userSn2']);
+            });
+
+            it('zadd, zrange spec2', function* () {
+                (yield (new FakeIoRedis(hostkey)).zadd('temp', 200, 'userSn')).should.be.eql(1);
+                (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn']);
+
+                (yield (new FakeIoRedis(hostkey)).zadd('temp', 300, 'userSn')).should.be.eql(0);
+                (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn']);
+
+                (yield (new FakeIoRedis(hostkey)).zadd('temp', 300, 'userSn2')).should.be.eql(1);
+                (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn', 'userSn2']);
+
+                (yield (new FakeIoRedis(hostkey)).zadd('temp', 700, 'userSn2')).should.be.eql(0);
+                (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn', 'userSn2']);
+
+                (yield (new FakeIoRedis(hostkey)).zadd('temp', 1000, 'userSn2')).should.be.eql(0);
+                (yield (new FakeIoRedis(hostkey)).zrange('temp', 0, -1)).should.be.eql(['userSn', 'userSn2']);
+            });
+
             it('empty and get', function* () {
                 const client = new FakeIoRedis(hostkey);
 

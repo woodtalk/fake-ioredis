@@ -5,8 +5,7 @@ class ReplyError extends Error {
     constructor(message) {
         super(message);
         this.message = message;
-        this.name = this.constructor.name;
-        this.stack = (new Error()).stack;
+        this.name = 'ReplyError';//this.constructor.name;
     }
 }
 

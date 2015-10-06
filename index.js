@@ -88,7 +88,7 @@ class FakeIoRedis {
     }
 
     ['del'](keys) {
-        keys = Array.prototype.slice.call(arguments, this.del.length - 1);
+        keys = Array.from(arguments);
         if (keys.length === 0) {
             throw new ReplyError(wrongNumberArgumentErrMsg('del'));
         }
@@ -166,7 +166,7 @@ class FakeIoRedis {
 
         const setData = mem[key];
 
-        values = Array.prototype.slice.call(arguments, this.sadd.length - 1);
+        values = parseValues(arguments);
 
         let r = 0;
         for (let value of values) {
@@ -186,15 +186,17 @@ class FakeIoRedis {
         if (typeof key !== 'string') {
             key = key.toString();
         }
+        values = parseValues(arguments);
+        if (values.length === 0) {
+            throw new ReplyError(wrongNumberArgumentErrMsg('srem'));
+        }
         const remoteHost = remoteHosts[this._.remoteHostKey];
-        if ((key in remoteHost.mem) === false) {
-            return 0;
+        if (remoteHost.mem.hasOwnProperty(key) === false) {
+            return Promise.resolve(0);
         }
         if (remoteHost.meta[key] !== 'set') {
             throw new ReplyError(typeErrMsg);
         }
-
-        values = Array.prototype.slice.call(arguments, this.srem.length - 1);
 
         let r = 0;
         for (let value of values) {
@@ -204,6 +206,11 @@ class FakeIoRedis {
             if (remoteHost.mem[key].delete(value)) {
                 r++;
             }
+        }
+
+        if (remoteHost.mem[key].size === 0) {
+            delete remoteHost.mem[key];
+            delete remoteHost.meta[key];
         }
 
         return Promise.resolve(r);
@@ -259,7 +266,8 @@ class FakeIoRedis {
 
         const r = Array.from(mem)[Math.floor(Math.random() * (mem.size - 1))];
         return this.srem(key, r)
-            .then(value => r);
+            //.then(() => r);
+            .then(value => value === 0 ? null : r);
     }
 
     smembers(key) {
@@ -275,6 +283,11 @@ class FakeIoRedis {
         }
 
         return Promise.resolve(Array.from(mem));
+    }
+
+    scard(key) {
+        return this.smembers(key)
+            .then(r => r.length);
     }
 
     subscribe(channel) {
@@ -372,7 +385,7 @@ class FakeIoRedis {
     }
 
     zadd(key, values) {
-        values = Array.prototype.slice.call(arguments, this.zadd.length - 1);
+        values = parseValues(arguments);
         if (values.length % 2 !== 0) {
             throw new ReplyError(syntaxErrMsg);
         }
@@ -621,7 +634,7 @@ class FakeIoRedis {
         }
         const mem = remoteHost.mem[key];
 
-        values = Array.prototype.slice.call(arguments, this.zrem.length - 1);
+        values = parseValues(arguments);
 
         let r = 0;
         for (let value of values) {
@@ -665,6 +678,15 @@ class FakeIoRedis {
 
     disconnect() {
     }
+}
+
+function parseValues(args) {
+    let values = Array.from(args);
+    values = values.slice(1, values.length);
+    if (values.length === 1 && values[0] === void 0) {
+        values = [];
+    }
+    return values;
 }
 
 module.exports = FakeIoRedis;

@@ -78,17 +78,25 @@ describe('scenarios', function () {
 
                 (yield client.sadd('temp', 'a', 'b')).should.be.eql(2);
                 (yield client.smembers('temp')).should.be.eql(['a', 'b']);
-                (yield client.sismember('temp', 'a')).should.be.eql(1);
-                (yield client.srem('temp', 'a', 'b')).should.be.eql(2);
 
                 (function* () {
                     yield client.set('temp', 's');
                 }).should.throw(ReplyError);
 
+                (yield client.sismember('temp', 'a')).should.be.eql(1);
+                (yield client.srem('temp', 'a', 'b')).should.be.eql(2);
+
                 yield client.set('string', 's');
                 (function* () {
                     yield client.sadd('string', 'aaa');
                 }).should.throw(ReplyError);
+
+                (yield client.sadd('temp', 'a', 'b')).should.be.eql(2);
+                (yield client.spop('temp')).should.match(/[ab]/);
+                (yield client.scard('temp')).should.be.eql(1);
+                (yield client.spop('temp')).should.match(/[ab]/);
+                (yield client.scard('temp')).should.be.eql(0);
+                should(yield client.spop('temp')).it.is.null();
             });
 
             it('pub/sub', function* () {

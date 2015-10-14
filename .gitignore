@@ -2,3 +2,5 @@ node_modules/
 .idea/workspace.xml
 npm-debug.log
 *.swp
+!redis-server/win32/*/*.exe
+!redis-server/win32/*/*.pdb

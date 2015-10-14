@@ -1,5 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="run-win" type="NodeJSConfigurationType" factoryName="Node.js" path-to-node="C:/Program Files/nodejs/node" path-to-js-file="helper/review-ioredis.js" working-dir="$PROJECT_DIR$">
-    <method />
-  </configuration>
-</component>

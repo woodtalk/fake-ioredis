@@ -15,7 +15,6 @@ class FakeIoRedis extends IoRedis {
     static clear() {
         server.kill();
         server = new RedisServer();
-
     }
 
     static fastClear() {

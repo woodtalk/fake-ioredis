@@ -1,27 +1,41 @@
 // Created by woodtalk on 2015-10-13.
 'use strict';
 
-const os = 'win';
-const versioned = 'Redis-x64-2.8.2103';
 
-const childProcess = require('child_process');
+const spawn = require('child_process').spawn;
+const execSync = require('child_process').execSync;
 const path = require('path');
+const debug = require('debug')('RedisServer');
+
+let subdir = 'win32/Redis-x64-2.8.2103';
+switch (process.platform) {
+    case 'win32':
+        if (process.arch === 'x64') {
+            subdir = `${process.platform}/Redis-x64-2.8.2103`;
+        }
+        break;
+    default:
+        break;
+}
+
+const config = path.join(__dirname, `./redis-server/redis.conf`);
 
 class RedisServer {
     constructor() {
         this.port = Math.floor(Math.random() * (60000 - 10000 + 1) + 10000);
 
-        const cmd = path.join(__dirname, `./utils/${os}/${versioned}/redis-server.exe`);
-        const config = path.join(__dirname, `./utils/redis.conf`);
+        const cmd = path.join(__dirname, `./redis-server/${subdir}/redis-server.exe`);
 
-        this.process = childProcess.spawn(cmd, [config, '--port', this.port]);
+        this.process = spawn(cmd, [config, '--port', this.port]);
 
         let loadingExpire = Date.now() + 3000;
-        while (isListeningPort(this.port)) {
+        while (isListeningPort(this.port, this.process.pid)) {
             if (loadingExpire <= Date.now()) {
                 throw new Error('redis server load timeout');
             }
         }
+
+        debug(`start redis server - pid: ${this.process.pid}, port: ${this.port}`);
     }
 
     kill() {
@@ -30,12 +44,18 @@ class RedisServer {
 }
 
 function isListeningPort(port) {
+    let cmd = null;
+    if (process.platform === 'win32') {
+        cmd = `netstat -ano | find "${port}"`;
+    }
+    if (cmd === null) {
+        throw new Error('os invalid');
+    }
+
     try {
-        childProcess.execSync(`netstat -ano | find "${this.port}"`, {encoding: 'utf8'});
+        execSync(cmd, {encoding: 'utf8'});
         return true;
-        //console.log(`start redis server - pid: ${this.process.pid}, port: ${this.port}`);
     } catch (e) {
-        //console.error(e);
         return false;
     }
 }

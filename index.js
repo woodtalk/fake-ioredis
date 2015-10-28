@@ -13,13 +13,15 @@ class FakeIoRedis extends IoRedis {
     }
 
     static clear() {
-        server.kill();
-        server = new RedisServer();
-    }
-
-    static fastClear() {
         const cli = new FakeIoRedis(server.port);
-        return cli.flushall();
+        return cli.pubsub('channels', '*').then(r => {
+            if (r.length === 0) {
+                return cli.flushall();
+            }
+
+            server.kill();
+            server = new RedisServer();
+        });
     }
 }
 

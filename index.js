@@ -23,13 +23,4 @@ class FakeIoRedis extends IoRedis {
     }
 }
 
-function parseValues(args) {
-    let values = Array.from(args);
-    values = values.slice(1, values.length);
-    if (values.length === 1 && values[0] === void 0) {
-        values = [];
-    }
-    return values;
-}
-
 module.exports = FakeIoRedis;

@@ -244,7 +244,7 @@ describe('data specs', () => {
         (yield client.scard('temp')).should.be.eql(0);
     });
 
-    afterEach(FakeIoRedis.fastClear);
+    afterEach(FakeIoRedis.clear);
 });
 
 describe('pubsub specs', () => {

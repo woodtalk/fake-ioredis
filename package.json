@@ -1,6 +1,6 @@
 {
   "name": "fake-ioredis",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "ioredis mockup module",
   "main": "index.js",
   "scripts": {
